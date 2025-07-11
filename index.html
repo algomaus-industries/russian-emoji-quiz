@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Russian Emoji Quiz</title>
+  <style>
+    body { margin:0; font-family: 'Segoe UI', sans-serif; background: #d0f0fd; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
+    .game-container { background: #fff; padding: 2rem; border-radius: 12px; box-shadow: 0 6px 12px rgba(0,0,0,0.1); width: 95vw; max-width: 700px; text-align: center; }
+    h1 { font-size: 2.2rem; margin-bottom: 0.5rem; }
+    .stats { display: flex; justify-content: space-between; font-size: 1.1rem; margin-bottom: 1rem; }
+    #instruction { font-size: 1.6rem; margin: 0.5rem 0; }
+    #timerBar { width: 100%; background: #ddd; border-radius: 5px; overflow: hidden; height: 10px; margin: 1rem 0; }
+    #timer { width: 100%; height: 100%; background: #ff9800; transition: width 1s linear; }
+    #grid { display: grid; gap: 10px; margin: 1rem 0; }
+    .item { font-size: 2.5rem; padding: 0.8rem; background: #e0f7fa; border-radius: 8px; cursor: pointer; user-select: none; transition: transform 0.1s, background 0.3s; }
+    .item:active { transform: scale(1.1); }
+    .item.correct { background: #c8e6c9 !important; }
+    .item.wrong { background: #ffcdd2 !important; }
+    #message { min-height: 1.4rem; margin-top: 0.5rem; font-size: 1.2rem; }
+    button { margin-top: 1rem; padding: 0.6rem 1.2rem; font-size: 1.2rem; border:none; border-radius:6px; background:#4caf50; color:#fff; cursor:pointer; }
+    button:hover { background:#388e3c; }
+  </style>
+</head>
+<body>
+  <div class="game-container">
+    <h1>Russian Emoji Quiz</h1>
+    <div class="stats">
+      <div>Level: <span id="level">1</span></div>
+      <div>Lives: <span id="lives">3</span></div>
+    </div>
+    <div id="instruction">...</div>
+    <div id="timerBar"><div id="timer"></div></div>
+    <div id="grid"></div>
+    <div id="message"></div>
+    <button id="startBtn">Start Game</button>
+  </div>
+
+  <script>
+    // Pleasant Web Audio tones
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    const audioCtx = new AudioContext();
+    function playToneSequence(notes, duration) {
+      notes.forEach((freq, i) => {
+        const time = audioCtx.currentTime + i * duration;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, time);
+        gain.gain.setValueAtTime(0.1, time);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(time);
+        osc.stop(time + duration);
+      });
+    }
+    function playStartTone() { playToneSequence([330, 440], 0.3); }
+    function playCorrectTone() { playToneSequence([440, 550, 660], 0.2); }
+    function playWrongTone() { playToneSequence([330, 295, 262], 0.3); }
+
+    // Vast vocabulary pool
+    const items = [
+      { ru: 'яблоко', icon: '🍎' }, { ru: 'банан', icon: '🍌' }, { ru: 'вишня', icon: '🍒' },
+      { ru: 'авокадо', icon: '🥑' }, { ru: 'апельсин', icon: '🍊' }, { ru: 'груша', icon: '🍐' },
+      { ru: 'арбуз', icon: '🍉' }, { ru: 'слива', icon: '🍑' }, { ru: 'персик', icon: '🍑' },
+      { ru: 'киви', icon: '🥝' }, { ru: 'ананас', icon: '🍍' }, { ru: 'абрикос', icon: '🍑' },
+      { ru: 'манго', icon: '🥭' }, { ru: 'лимон', icon: '🍋' }, { ru: 'клубника', icon: '🍓' },
+      { ru: 'малина', icon: '🍇' }, { ru: 'черника', icon: '🫐' }, { ru: 'виноград', icon: '🍇' },
+      { ru: 'дыня', icon: '🍈' }, { ru: 'томат', icon: '🍅' }, { ru: 'огурец', icon: '🥒' },
+      { ru: 'перец', icon: '🌶️' }, { ru: 'картофель', icon: '🥔' }, { ru: 'морковь', icon: '🥕' },
+      { ru: 'кукуруза', icon: '🌽' }, { ru: 'капуста', icon: '🥬' }, { ru: 'баклажан', icon: '🍆' },
+      { ru: 'лук', icon: '🧅' }, { ru: 'чеснок', icon: '🧄' }, { ru: 'брокколи', icon: '🥦' },
+      { ru: 'гриб', icon: '🍄' }, { ru: 'салат', icon: '🥗' }, { ru: 'хлеб', icon: '🍞' },
+      { ru: 'булочка', icon: '🥐' }, { ru: 'сыр', icon: '🧀' }, { ru: 'яйцо', icon: '🥚' },
+      { ru: 'молоко', icon: '🥛' }, { ru: 'мясо', icon: '🍖' }, { ru: 'рыба', icon: '🐟' },
+      { ru: 'креветка', icon: '🍤' }, { ru: 'краб', icon: '🦀' }, { ru: 'лосось', icon: '🍣' },
+      { ru: 'суши', icon: '🍣' }, { ru: 'суп', icon: '🍜' }, { ru: 'паста', icon: '🍝' },
+      { ru: 'рис', icon: '🍚' }, { ru: 'пицца', icon: '🍕' }, { ru: 'бургер', icon: '🍔' },
+      { ru: 'сэндвич', icon: '🥪' }, { ru: 'стейк', icon: '🥩' }, { ru: 'курица', icon: '🍗' },
+      { ru: 'торт', icon: '🎂' }, { ru: 'пирог', icon: '🥧' }, { ru: 'печенье', icon: '🍪' },
+      { ru: 'шоколад', icon: '🍫' }, { ru: 'конфета', icon: '🍬' }, { ru: 'леденец', icon: '🍭' },
+      { ru: 'кофе', icon: '☕' }, { ru: 'чай', icon: '🍵' }, { ru: 'сок', icon: '🧃' },
+      { ru: 'вино', icon: '🍷' }, { ru: 'пиво', icon: '🍺' }, { ru: 'коктейль', icon: '🍹' },
+      { ru: 'кот', icon: '🐱' }, { ru: 'собака', icon: '🐶' }, { ru: 'мышь', icon: '🐭' },
+      { ru: 'кролик', icon: '🐰' }, { ru: 'лиса', icon: '🦊' }, { ru: 'медведь', icon: '🐻' },
+      { ru: 'лев', icon: '🦁' }, { ru: 'тигр', icon: '🐯' }, { ru: 'слон', icon: '🐘' },
+      { ru: 'зебра', icon: '🦓' }, { ru: 'жираф', icon: '🦒' }, { ru: 'носорог', icon: '🦏' },
+      { ru: 'единорог', icon: '🦄' }, { ru: 'панда', icon: '🐼' }, { ru: 'корова', icon: '🐮' },
+      { ru: 'утка', icon: '🦆' }, { ru: 'лошадь', icon: '🐴' }, { ru: 'птица', icon: '🐦' },
+      { ru: 'кит', icon: '🐋' }, { ru: 'дельфин', icon: '🐬' }, { ru: 'акула', icon: '🦈' },
+      { ru: 'змея', icon: '🐍' }, { ru: 'паук', icon: '🕷️' }, { ru: 'бабочка', icon: '🦋' },
+      { ru: 'пчела', icon: '🐝' }, { ru: 'лягушка', icon: '🐸' }, { ru: 'черепаха', icon: '🐢' },
+      { ru: 'вода', icon: '💧' }, { ru: 'огонь', icon: '🔥' }, { ru: 'земля', icon: '🌎' },
+      { ru: 'воздух', icon: '💨' }, { ru: 'камень', icon: '🪨' }, { ru: 'дерево', icon: '🌳' },
+      { ru: 'цветок', icon: '🌸' }, { ru: 'лист', icon: '🍃' }, { ru: 'солнце', icon: '☀️' },
+      { ru: 'луна', icon: '🌙' }, { ru: 'звезда', icon: '⭐' }, { ru: 'облако', icon: '☁️' },
+      { ru: 'дождь', icon: '🌧️' }, { ru: 'снег', icon: '❄️' }, { ru: 'радуга', icon: '🌈' },
+      { ru: 'гора', icon: '🏔️' }, { ru: 'вулкан', icon: '🌋' }, { ru: 'пустыня', icon: '🏜️' },
+      { ru: 'пляж', icon: '🏖️' }, { ru: 'мост', icon: '🌉' }, { ru: 'дом', icon: '🏠' },
+      { ru: 'замок', icon: '🏰' }, { ru: 'машина', icon: '🚗' }, { ru: 'поезд', icon: '🚆' },
+      { ru: 'самолет', icon: '✈️' }, { ru: 'корабль', icon: '🚢' }, { ru: 'велосипед', icon: '🚲' },
+      { ru: 'автобус', icon: '🚌' }, { ru: 'такси', icon: '🚖' }, { ru: 'мотоцикл', icon: '🏍️' },
+      { ru: 'ракета', icon: '🚀' }, { ru: 'космический корабль', icon: '🛸' },
+      { ru: 'телефон', icon: '📱' }, { ru: 'компьютер', icon: '💻' }, { ru: 'камера', icon: '📷' },
+      { ru: 'радио', icon: '📻' }, { ru: 'телевизор', icon: '📺' }, { ru: 'часы', icon: '⏰' },
+      { ru: 'звук', icon: '🔊' }, { ru: 'музыка', icon: '🎵' }, { ru: 'гитара', icon: '🎸' },
+      { ru: 'пианино', icon: '🎹' }, { ru: 'микрофон', icon: '🎤' }, { ru: 'деньги', icon: '💵' },
+      { ru: 'книга', icon: '📖' }, { ru: 'газета', icon: '📰' }, { ru: 'ручка', icon: '🖊️' },
+      { ru: 'карандаш', icon: '✏️' }, { ru: 'бумага', icon: '📄' }, { ru: 'зонт', icon: '☂️' },
+      { ru: 'шляпа', icon: '🎩' }, { ru: 'рубашка', icon: '👕' }, { ru: 'штаны', icon: '👖' },
+      { ru: 'обувь', icon: '👟' }, { ru: 'молоток', icon: '🔨' }, { ru: 'гаечный ключ', icon: '🔧' },
+      { ru: 'отвертка', icon: '🪛' }, { ru: 'футбол', icon: '⚽' }, { ru: 'баскетбол', icon: '🏀' },
+      { ru: 'теннис', icon: '🎾' }, { ru: 'бейсбол', icon: '⚾' }, { ru: 'гольф', icon: '⛳' },
+      { ru: 'улыбка', icon: '😊' }, { ru: 'грусть', icon: '😢' }, { ru: 'злость', icon: '😡' },
+      { ru: 'любовь', icon: '❤️' }, { ru: 'врач', icon: '👨‍⚕️' }, { ru: 'инженер', icon: '👩‍💻' },
+      { ru: 'учитель', icon: '👩‍🏫' }, { ru: 'художник', icon: '👩‍🎨' }, { ru: 'повар', icon: '👨‍🍳' }
+    ];
+
+    let level = 0, lives = 3, timerInterval;
+    const timeLimit = 7;
+
+    const instructionEl = document.getElementById('instruction');
+    const timerEl = document.getElementById('timer');
+    const gridEl = document.getElementById('grid');
+    const levelEl = document.getElementById('level');
+    const livesEl = document.getElementById('lives');
+    const messageEl = document.getElementById('message');
+    const startBtn = document.getElementById('startBtn');
+
+    function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
+    function setGridColumns(n) { gridEl.style.gridTemplateColumns = `repeat(${n}, 1fr)`; }
+
+    function startTimer() {
+      clearInterval(timerInterval);
+      let t = timeLimit;
+      timerEl.style.width = '100%';
+      timerInterval = setInterval(() => {
+        t--;
+        timerEl.style.width = (t / timeLimit * 100) + '%';
+        if (t <= 0) { clearInterval(timerInterval); processAnswer(null); }
+      }, 1000);
+    }
+
+    function startLevel() {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      if (level === 0) playStartTone();
+      if (lives <= 0) return endGame();
+      level++;
+      levelEl.textContent = level;
+      livesEl.textContent = lives;
+      messageEl.textContent = '';
+      startBtn.style.display = 'none';
+
+      const poolSize = Math.min(4 + Math.floor(level * 1.5), items.length);
+      const pool = shuffle(items).slice(0, poolSize);
+      const target = pool[Math.floor(Math.random() * pool.length)];
+      instructionEl.textContent = `Найди ${target.ru}`;
+
+      gridEl.innerHTML = '';
+      setGridColumns(Math.ceil(Math.sqrt(poolSize)));
+      shuffle(pool).forEach(obj => {
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.textContent = obj.icon;
+        div.dataset.ru = obj.ru;
+        div.onclick = () => processAnswer(obj, target, div);
+        gridEl.appendChild(div);
+      });
+
+      startTimer();
+    }
+
+    function processAnswer(obj, target, elem) {
+      clearInterval(timerInterval);
+      gridEl.querySelectorAll('.item').forEach(b => b.onclick = null);
+      if (obj && obj.ru === target.ru) {
+        elem.classList.add('correct');
+        playCorrectTone();
+        messageEl.textContent = '✅ Отлично!';
+      } else {
+        if (elem) elem.classList.add('wrong');
+        playWrongTone();
+        const correctElem = Array.from(gridEl.children).find(div => div.dataset.ru === target.ru);
+        if (correctElem) correctElem.classList.add('correct');
+        lives--;
+        livesEl.textContent = lives;
+        messageEl.textContent = obj ? `❌ Это ${obj.ru}` : '❌ Время вышло!';
+      }
+      setTimeout(startLevel, 1200);
+    }
+
+    function endGame() {
+      instructionEl.textContent = 'Игра окончена';
+      messageEl.textContent = `Достигнут уровень: ${level}`;
+      startBtn.textContent = 'Restart';
+      startBtn.style.display = 'block';
+      level = 0;
+      lives = 3;
+    }
+
+    startBtn.addEventListener('click', startLevel);
+  </script>
+</body>
+</html>
+
