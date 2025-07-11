@@ -124,6 +124,7 @@
         musicToggle.textContent = '🔈 Music Off';
         musicToggle.classList.remove('playing');
       } else {
+        bgMusic.volume = 0.2
         bgMusic.play().catch(() => {});
         musicToggle.textContent = '🔊 Music On';
         musicToggle.classList.add('playing');
