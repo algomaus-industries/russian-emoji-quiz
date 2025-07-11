@@ -2,40 +2,114 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Russian Emoji Quiz</title>
   <style>
-    body { margin:0; font-family: 'Segoe UI', sans-serif; background: #d0f0fd; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; }
-    .game-container { background: #fff; padding: 2rem; border-radius: 12px; box-shadow: 0 6px 12px rgba(0,0,0,0.1); width: 95vw; max-width: 700px; text-align: center; }
-    h1 { font-size: 2.2rem; margin-bottom: 0.5rem; }
-    .stats { display: flex; justify-content: space-between; font-size: 1.1rem; margin-bottom: 1rem; }
-    #instruction { font-size: 1.6rem; margin: 0.5rem 0; }
-    #timerBar { width: 100%; background: #ddd; border-radius: 5px; overflow: hidden; height: 10px; margin: 1rem 0; }
+    /* Reset & Utility */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', sans-serif;
+      background: #d0f0fd;
+      padding: env(safe-area-inset);
+    }
+
+    /* Game container */
+    .game-container {
+      background: #fff;
+      padding: 1.5rem;
+      border-radius: 1rem;
+      box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+      width: 95%;
+      max-width: 640px;
+      text-align: center;
+    }
+
+    /* Fluid typography */
+    h1 { font-size: clamp(1.8rem, 6vw, 2.2rem); margin-bottom: 0.5rem; }
+    .stats { display: flex; justify-content: space-between; font-size: clamp(1rem, 3vw, 1.1rem); margin-bottom: 1rem; }
+    #instruction { font-size: clamp(1.3rem, 4vw, 1.6rem); margin: 0.5rem 0; }
+    #message { min-height: 1.4rem; margin-top: 0.5rem; font-size: clamp(1rem, 3vw, 1.2rem); }
+
+    /* Timer bar */
+    #timerBar {
+      width: 100%; background: #ddd;
+      border-radius: 5px; overflow: hidden;
+      height: 0.6rem; margin: 1rem 0;
+    }
     #timer { width: 100%; height: 100%; background: #ff9800; transition: width 1s linear; }
-    #grid { display: grid; gap: 10px; margin: 1rem 0; }
-    .item { font-size: 2.5rem; padding: 0.8rem; background: #e0f7fa; border-radius: 8px; cursor: pointer; user-select: none; transition: transform 0.1s, background 0.3s; }
+
+    /* Grid: auto-fit items */
+    #grid {
+      display: grid;
+      gap: clamp(0.5rem, 2vw, 1rem);
+      grid-template-columns: repeat(auto-fit, minmax(3rem, 1fr));
+      margin: 1rem 0;
+    }
+
+    .item {
+      font-size: clamp(2rem, 8vw, 2.5rem);
+      padding: clamp(0.5rem, 2vw, 0.8rem);
+      background: #e0f7fa;
+      border-radius: 0.8rem;
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.1s, background 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      aspect-ratio: 1 / 1;
+    }
     .item:active { transform: scale(1.1); }
     .item.correct { background: #c8e6c9 !important; }
-    .item.wrong { background: #ffcdd2 !important; }
-    #message { min-height: 1.4rem; margin-top: 0.5rem; font-size: 1.2rem; }
-    button { margin-top: 1rem; padding: 0.6rem 1.2rem; font-size: 1.2rem; border:none; border-radius:6px; background:#4caf50; color:#fff; cursor:pointer; }
-    button:hover { background:#388e3c; }
+    .item.wrong   { background: #ffcdd2 !important; }
+
+    /* Start/Restart button */
+    button#startBtn {
+      margin-top: 1rem;
+      padding: 0.6rem 1.2rem;
+      font-size: clamp(1rem, 3vw, 1.2rem);
+      border: none;
+      border-radius: 0.6rem;
+      background: #4caf50;
+      color: #fff;
+      cursor: pointer;
+    }
+    button#startBtn:hover { background: #388e3c; }
 
     /* Music toggle button */
     .music-btn {
-      position: absolute; top: 1rem; right: 1rem;
-      padding: 0.5rem; font-size: 1.2rem;
-      border: none; border-radius: 6px;
-      background: rgba(0,0,0,0.1); cursor: pointer;
+      position: fixed;
+      top: env(safe-area-inset-top, 1rem);
+      right: env(safe-area-inset-right, 1rem);
+      padding: 0.5rem;
+      font-size: 1.2rem;
+      border: none;
+      border-radius: 0.6rem;
+      background: rgba(0,0,0,0.1);
+      cursor: pointer;
+      z-index: 1000;
     }
     .music-btn.playing { background: rgba(0,0,0,0.2); }
 
-    /* Achievement badge popup */
+    /* Achievement badge */
     .achievement-badge {
-      position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%) translateY(100%);
-      background: #333; color: #fff; padding: 1rem 1.5rem; border-radius: 8px;
-      text-align: center; opacity: 0; transition: transform 0.4s, opacity 0.4s;
-      pointer-events: none; z-index: 999;
+      position: fixed;
+      bottom: 1rem;
+      left: 50%;
+      transform: translateX(-50%) translateY(100%);
+      background: #333;
+      color: #fff;
+      padding: 1rem 1.5rem;
+      border-radius: 0.8rem;
+      text-align: center;
+      opacity: 0;
+      transition: transform 0.4s, opacity 0.4s;
+      pointer-events: none;
+      z-index: 999;
     }
     .achievement-badge.visible {
       transform: translateX(-50%) translateY(0);
@@ -44,7 +118,7 @@
   </style>
 </head>
 <body>
-  <!-- Background music & toggle -->
+  <!-- Music toggle -->
   <audio id="bgMusic" src="https://www.bensound.com/bensound-music/bensound-sunny.mp3" loop preload="auto"></audio>
   <button id="musicToggle" class="music-btn">🔈 Music Off</button>
 
@@ -62,13 +136,13 @@
   </div>
 
   <script>
-    // Pleasant Web Audio tones
+    // Audio setup
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     const audioCtx = new AudioContext();
     function playToneSequence(notes, duration) {
       notes.forEach((freq, i) => {
         const time = audioCtx.currentTime + i * duration;
-        const osc = audioCtx.createOscillator();
+        const osc  = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
         osc.type = 'sine';
         osc.frequency.setValueAtTime(freq, time);
@@ -78,32 +152,21 @@
         osc.stop(time + duration);
       });
     }
-    function playStartTone() { playToneSequence([330, 440], 0.3); }
-    function playCorrectTone() { playToneSequence([440, 550, 660], 0.2); }
-    function playWrongTone() { playToneSequence([330, 295, 262], 0.3); }
+    const playStartTone   = () => playToneSequence([330,440], 0.3);
+    const playCorrectTone = () => playToneSequence([440,550,660], 0.2);
+    const playWrongTone   = () => playToneSequence([330,295,262], 0.3);
 
     // Achievements config
     const ACHIEVEMENTS = [
-      { id: 'first_win', title: 'First Win',     desc: 'Get 1 correct',           icon: '🏆', condition: stats => stats.correct >= 1 },
-      { id: 'streak_5',  title: '5-in-a-Row',    desc: '5 correct in a row',       icon: '🔥', condition: stats => stats.maxStreak >= 5 },
-      { id: 'level_10',  title: 'Level 10 Master', desc: 'Reach level 10',          icon: '🎖️', condition: stats => stats.maxLevel >= 10 }
+      { id: 'first_win',   title: 'First Win',      desc: 'Get 1 correct',        icon: '🏆', condition: s => s.correct >= 1 },
+      { id: 'streak_5',    title: '5-in-a-Row',     desc: '5 correct in a row',   icon: '🔥', condition: s => s.maxStreak >= 5 },
+      { id: 'level_10',    title: 'Level 10 Master',desc: 'Reach level 10',       icon: '🎖️', condition: s => s.maxLevel >=10 }
     ];
 
-    // Load or initialize stats
-    const stats = JSON.parse(localStorage.getItem('quizStats') || '{}');
-    stats.correct       = stats.correct       || 0;
-    stats.currentStreak = stats.currentStreak || 0;
-    stats.maxStreak     = stats.maxStreak     || 0;
-    stats.maxLevel      = stats.maxLevel      || 0;
-    const unlocked = new Set(JSON.parse(localStorage.getItem('achievements') || '[]'));
-
-    function getCategory(word) {
-      const fruits  = ['яблоко','банан','груша','апельсин','киви','манго','гранат'];
-      const animals = ['кот','собака','тигр','слон','панда'];
-      if (fruits.includes(word)) return 'fruits';
-      if (animals.includes(word)) return 'animals';
-      return 'other';
-    }
+    // Stats & achievements storage
+    let stats = JSON.parse(localStorage.getItem('quizStats')|| '{}');
+    stats = { correct:0, currentStreak:0, maxStreak:0, maxLevel:0, ...stats };
+    const unlocked = new Set(JSON.parse(localStorage.getItem('achievements')|| '[]'));
 
     function showAchievement(a) {
       const badge = document.createElement('div');
@@ -114,21 +177,14 @@
       setTimeout(() => badge.classList.remove('visible'), 3500);
     }
 
-    // Background music toggle
+    // Music toggle
     const bgMusic = document.getElementById('bgMusic');
-    bgMusic.volume = 0.2;  // 20%
+    bgMusic.volume = 0.2;
     const musicToggle = document.getElementById('musicToggle');
     let musicPlaying = false;
     musicToggle.addEventListener('click', () => {
-      if (musicPlaying) {
-        bgMusic.pause();
-        musicToggle.textContent = '🔈 Music Off';
-        musicToggle.classList.remove('playing');
-      } else {
-        bgMusic.play().catch(() => {});
-        musicToggle.textContent = '🔊 Music On';
-        musicToggle.classList.add('playing');
-      }
+      if (musicPlaying) { bgMusic.pause(); musicToggle.textContent='🔈 Music Off'; musicToggle.classList.remove('playing'); }
+      else { bgMusic.play().catch(()=>{}); musicToggle.textContent='🔊 Music On'; musicToggle.classList.add('playing'); }
       musicPlaying = !musicPlaying;
     });
 
@@ -190,19 +246,19 @@
       { ru: 'учитель', icon: '👩‍🏫' }, { ru: 'художник', icon: '👩‍🎨' }, { ru: 'повар', icon: '👨‍🍳' }
     ];
 
-    let level = 0, lives = 3, timerInterval;
+    let level=0, lives=3, timerInterval=null;
     const timeLimit = 7;
+    let currentTarget = null;
 
     const instructionEl = document.getElementById('instruction');
-    const timerEl = document.getElementById('timer');
-    const gridEl = document.getElementById('grid');
-    const levelEl = document.getElementById('level');
-    const livesEl = document.getElementById('lives');
-    const messageEl = document.getElementById('message');
-    const startBtn = document.getElementById('startBtn');
+    const timerEl       = document.getElementById('timer');
+    const gridEl        = document.getElementById('grid');
+    const levelEl       = document.getElementById('level');
+    const livesEl       = document.getElementById('lives');
+    const messageEl     = document.getElementById('message');
+    const startBtn      = document.getElementById('startBtn');
 
-    function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
-    function setGridColumns(n) { gridEl.style.gridTemplateColumns = `repeat(${n}, 1fr)`; }
+    function shuffle(arr) { return arr.sort(() => Math.random()-0.5); }
 
     function startTimer() {
       clearInterval(timerInterval);
@@ -210,35 +266,36 @@
       timerEl.style.width = '100%';
       timerInterval = setInterval(() => {
         t--;
-        timerEl.style.width = (t / timeLimit * 100) + '%';
-        if (t <= 0) { clearInterval(timerInterval); processAnswer(null); }
+        timerEl.style.width = `${(t/timeLimit)*100}%`;
+        if (t <= 0) {
+          clearInterval(timerInterval);
+          processAnswer(null, currentTarget);
+        }
       }, 1000);
     }
 
     function startLevel() {
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      if (level === 0) playStartTone();
-      if (lives <= 0) return endGame();
+      if (audioCtx.state==='suspended') audioCtx.resume();
+      if (lives<=0) return endGame();
       level++;
       levelEl.textContent = level;
       livesEl.textContent = lives;
       messageEl.textContent = '';
       startBtn.style.display = 'none';
 
-      const poolSize = Math.min(4 + Math.floor(level * 1.5), items.length);
-      const pool = shuffle(items).slice(0, poolSize);
-      const target = pool[Math.floor(Math.random() * pool.length)];
-      instructionEl.textContent = `Найди ${target.ru}`;
+      const poolSize = Math.min(4 + Math.floor(level*1.5), items.length);
+      const pool     = shuffle(items).slice(0, poolSize);
+      currentTarget  = pool[Math.floor(Math.random()*pool.length)];
+      instructionEl.textContent = `Найди ${currentTarget.ru}`;
 
       gridEl.innerHTML = '';
-      setGridColumns(Math.ceil(Math.sqrt(poolSize)));
-      shuffle(pool).forEach(obj => {
-        const div = document.createElement('div');
-        div.className = 'item';
-        div.textContent = obj.icon;
-        div.dataset.ru = obj.ru;
-        div.onclick = () => processAnswer(obj, target, div);
-        gridEl.appendChild(div);
+      pool.forEach(obj => {
+        const btn = document.createElement('div');
+        btn.className = 'item';
+        btn.textContent = obj.icon;
+        btn.dataset.ru = obj.ru;
+        btn.addEventListener('click', () => processAnswer(obj, currentTarget, btn));
+        gridEl.appendChild(btn);
       });
 
       startTimer();
@@ -246,19 +303,22 @@
 
     function processAnswer(obj, target, elem) {
       clearInterval(timerInterval);
-      gridEl.querySelectorAll('.item').forEach(b => b.onclick = null);
-      if (obj && obj.ru === target.ru) {
+      // disable further clicks
+      gridEl.querySelectorAll('.item').forEach(i => i.replaceWith(i.cloneNode(true)));
+
+      if (obj && obj.ru===target.ru) {
         elem.classList.add('correct');
         playCorrectTone();
-        messageEl.textContent = '✅ Отлично!';
+        messageEl.textContent='✅ Отлично!';
         stats.correct++;
         stats.currentStreak++;
         stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
       } else {
         if (elem) elem.classList.add('wrong');
         playWrongTone();
-        const correctElem = Array.from(gridEl.children).find(div => div.dataset.ru === target.ru);
-        if (correctElem) correctElem.classList.add('correct');
+        // highlight correct
+        const correctDiv = [...gridEl.children].find(d=>d.dataset.ru===target.ru);
+        if (correctDiv) correctDiv.classList.add('correct');
         lives--;
         livesEl.textContent = lives;
         messageEl.textContent = obj ? `❌ Это ${obj.ru}` : '❌ Время вышло!';
@@ -279,11 +339,10 @@
 
     function endGame() {
       instructionEl.textContent = 'Игра окончена';
-      messageEl.textContent = `Достигнут уровень: ${level}`;
-      startBtn.textContent = 'Restart';
-      startBtn.style.display = 'block';
-      level = 0;
-      lives = 3;
+      messageEl.textContent     = `Достигнут уровень: ${level}`;
+      startBtn.textContent      = 'Restart';
+      startBtn.style.display    = 'block';
+      level=0; lives=3;
     }
 
     startBtn.addEventListener('click', startLevel);
