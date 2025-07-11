@@ -45,7 +45,7 @@
 </head>
 <body>
   <!-- Background music & toggle -->
-  <audio id="bgMusic" src="https://www.bensound.com/bensound-music/bensound-sunny.mp3" loop preload="auto"></audio>  <!-- ([community.home-assistant.io](https://community.home-assistant.io/t/sonos-mp3-playing-fails/43321/10?utm_source=chatgpt.com)) -->
+  <audio id="bgMusic" src="https://www.bensound.com/bensound-music/bensound-sunny.mp3" loop preload="auto"></audio>
   <button id="musicToggle" class="music-btn">🔈 Music Off</button>
 
   <div class="game-container">
@@ -116,6 +116,7 @@
 
     // Background music toggle
     const bgMusic = document.getElementById('bgMusic');
+    bgMusic.volume = 0.2;  // 20%
     const musicToggle = document.getElementById('musicToggle');
     let musicPlaying = false;
     musicToggle.addEventListener('click', () => {
@@ -124,7 +125,6 @@
         musicToggle.textContent = '🔈 Music Off';
         musicToggle.classList.remove('playing');
       } else {
-        bgMusic.volume = 0.2
         bgMusic.play().catch(() => {});
         musicToggle.textContent = '🔊 Music On';
         musicToggle.classList.add('playing');
