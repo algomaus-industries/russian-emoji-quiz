@@ -20,9 +20,34 @@
     #message { min-height: 1.4rem; margin-top: 0.5rem; font-size: 1.2rem; }
     button { margin-top: 1rem; padding: 0.6rem 1.2rem; font-size: 1.2rem; border:none; border-radius:6px; background:#4caf50; color:#fff; cursor:pointer; }
     button:hover { background:#388e3c; }
+
+    /* Music toggle button */
+    .music-btn {
+      position: absolute; top: 1rem; right: 1rem;
+      padding: 0.5rem; font-size: 1.2rem;
+      border: none; border-radius: 6px;
+      background: rgba(0,0,0,0.1); cursor: pointer;
+    }
+    .music-btn.playing { background: rgba(0,0,0,0.2); }
+
+    /* Achievement badge popup */
+    .achievement-badge {
+      position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%) translateY(100%);
+      background: #333; color: #fff; padding: 1rem 1.5rem; border-radius: 8px;
+      text-align: center; opacity: 0; transition: transform 0.4s, opacity 0.4s;
+      pointer-events: none; z-index: 999;
+    }
+    .achievement-badge.visible {
+      transform: translateX(-50%) translateY(0);
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
+  <!-- Background music & toggle -->
+  <audio id="bgMusic" src="https://www.bensound.com/bensound-music/bensound-sunny.mp3" loop preload="auto"></audio>  <!-- ([community.home-assistant.io](https://community.home-assistant.io/t/sonos-mp3-playing-fails/43321/10?utm_source=chatgpt.com)) -->
+  <button id="musicToggle" class="music-btn">🔈 Music Off</button>
+
   <div class="game-container">
     <h1>Russian Emoji Quiz</h1>
     <div class="stats">
@@ -56,6 +81,55 @@
     function playStartTone() { playToneSequence([330, 440], 0.3); }
     function playCorrectTone() { playToneSequence([440, 550, 660], 0.2); }
     function playWrongTone() { playToneSequence([330, 295, 262], 0.3); }
+
+    // Achievements config
+    const ACHIEVEMENTS = [
+      { id: 'first_win', title: 'First Win',     desc: 'Get 1 correct',           icon: '🏆', condition: stats => stats.correct >= 1 },
+      { id: 'streak_5',  title: '5-in-a-Row',    desc: '5 correct in a row',       icon: '🔥', condition: stats => stats.maxStreak >= 5 },
+      { id: 'level_10',  title: 'Level 10 Master', desc: 'Reach level 10',          icon: '🎖️', condition: stats => stats.maxLevel >= 10 }
+    ];
+
+    // Load or initialize stats
+    const stats = JSON.parse(localStorage.getItem('quizStats') || '{}');
+    stats.correct       = stats.correct       || 0;
+    stats.currentStreak = stats.currentStreak || 0;
+    stats.maxStreak     = stats.maxStreak     || 0;
+    stats.maxLevel      = stats.maxLevel      || 0;
+    const unlocked = new Set(JSON.parse(localStorage.getItem('achievements') || '[]'));
+
+    function getCategory(word) {
+      const fruits  = ['яблоко','банан','груша','апельсин','киви','манго','гранат'];
+      const animals = ['кот','собака','тигр','слон','панда'];
+      if (fruits.includes(word)) return 'fruits';
+      if (animals.includes(word)) return 'animals';
+      return 'other';
+    }
+
+    function showAchievement(a) {
+      const badge = document.createElement('div');
+      badge.className = 'achievement-badge';
+      badge.innerHTML = `${a.icon} <strong>${a.title}</strong><br><small>${a.desc}</small>`;
+      document.body.appendChild(badge);
+      setTimeout(() => badge.classList.add('visible'), 50);
+      setTimeout(() => badge.classList.remove('visible'), 3500);
+    }
+
+    // Background music toggle
+    const bgMusic = document.getElementById('bgMusic');
+    const musicToggle = document.getElementById('musicToggle');
+    let musicPlaying = false;
+    musicToggle.addEventListener('click', () => {
+      if (musicPlaying) {
+        bgMusic.pause();
+        musicToggle.textContent = '🔈 Music Off';
+        musicToggle.classList.remove('playing');
+      } else {
+        bgMusic.play().catch(() => {});
+        musicToggle.textContent = '🔊 Music On';
+        musicToggle.classList.add('playing');
+      }
+      musicPlaying = !musicPlaying;
+    });
 
     // Vast vocabulary pool
     const items = [
@@ -176,6 +250,9 @@
         elem.classList.add('correct');
         playCorrectTone();
         messageEl.textContent = '✅ Отлично!';
+        stats.correct++;
+        stats.currentStreak++;
+        stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
       } else {
         if (elem) elem.classList.add('wrong');
         playWrongTone();
@@ -184,7 +261,18 @@
         lives--;
         livesEl.textContent = lives;
         messageEl.textContent = obj ? `❌ Это ${obj.ru}` : '❌ Время вышло!';
+        stats.currentStreak = 0;
       }
+      stats.maxLevel = Math.max(stats.maxLevel, level);
+      localStorage.setItem('quizStats', JSON.stringify(stats));
+      ACHIEVEMENTS.forEach(a => {
+        if (!unlocked.has(a.id) && a.condition(stats)) {
+          unlocked.add(a.id);
+          showAchievement(a);
+        }
+      });
+      localStorage.setItem('achievements', JSON.stringify([...unlocked]));
+
       setTimeout(startLevel, 1200);
     }
 
