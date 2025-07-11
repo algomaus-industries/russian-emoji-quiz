@@ -63,6 +63,9 @@
       justify-content: center;
       aspect-ratio: 1 / 1;
     }
+    .item.disabled {
+      pointer-events: none;
+    }
     .item:active { transform: scale(1.1); }
     .item.correct { background: #c8e6c9 !important; }
     .item.wrong   { background: #ffcdd2 !important; }
@@ -248,7 +251,7 @@
     function processAnswer(obj, target, elem) {
       clearInterval(timerInterval);
       // disable further clicks
-      gridEl.querySelectorAll('.item').forEach(i => i.replaceWith(i.cloneNode(true)));
+      gridEl.querySelectorAll('.item').forEach(i => i.classList.add('disabled'));
 
       if (obj && obj.ru===target.ru) {
         elem.classList.add('correct');
