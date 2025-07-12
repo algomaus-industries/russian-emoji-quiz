@@ -42,17 +42,13 @@
     }
     #timer { width: 100%; height: 100%; background: #ff9800; transition: width 1s linear; }
 
-    /* Grid: auto-fit items */
+    /* Grid: fixed 4×4 layout */
     #grid {
       display: grid;
       width: 100%;
       gap: clamp(0.5rem, 2vw, 1rem);
-      grid-template-columns: repeat(auto-fit, minmax(3.2rem, 1fr));
+      grid-template-columns: repeat(4, 1fr);
       margin: 1rem 0;
-      align-content: start;
-      height: auto;
-      max-height: 100%;
-      overflow: visible;
     }
 
     .item {
@@ -72,9 +68,7 @@
       width: 100%;
       height: auto;
     }
-    .item.disabled {
-      pointer-events: none;
-    }
+    .item.disabled { pointer-events: none; }
     .item:active { transform: scale(1.1); }
     .item.correct { background: #c8e6c9 !important; }
     .item.wrong   { background: #ffcdd2 !important; }
@@ -149,7 +143,7 @@
 
   <script type="module">
     import { items } from './items.js';
-  
+
     // Audio setup
     const AudioContext = window.AudioContext || window.webkitAudioContext;
     const audioCtx = new AudioContext();
@@ -166,15 +160,14 @@
         osc.stop(time + duration);
       });
     }
-    const playStartTone   = () => playToneSequence([330,440], 0.3);
     const playCorrectTone = () => playToneSequence([440,550,660], 0.2);
     const playWrongTone   = () => playToneSequence([330,295,262], 0.3);
 
     // Achievements config
     const ACHIEVEMENTS = [
-      { id: 'first_win',   title: 'First Win',      desc: 'Get 1 correct',        icon: '🏆', condition: s => s.correct >= 1 },
-      { id: 'streak_5',    title: '5-in-a-Row',     desc: '5 correct in a row',   icon: '🔥', condition: s => s.maxStreak >= 5 },
-      { id: 'level_10',    title: 'Level 10 Master',desc: 'Reach level 10',       icon: '🎖️', condition: s => s.maxLevel >=10 }
+      { id: 'first_win',   title: 'First Win',       desc: 'Get 1 correct',        icon: '🏆', condition: s => s.correct >= 1 },
+      { id: 'streak_5',    title: '5-in-a-Row',      desc: '5 correct in a row',   icon: '🔥', condition: s => s.maxStreak >= 5 },
+      { id: 'level_10',    title: 'Level 10 Master', desc: 'Reach level 10',       icon: '🎖️', condition: s => s.maxLevel >= 10 }
     ];
 
     // Stats & achievements storage
@@ -197,12 +190,19 @@
     const musicToggle = document.getElementById('musicToggle');
     let musicPlaying = false;
     musicToggle.addEventListener('click', () => {
-      if (musicPlaying) { bgMusic.pause(); musicToggle.textContent='🔈 Music Off'; musicToggle.classList.remove('playing'); }
-      else { bgMusic.play().catch(()=>{}); musicToggle.textContent='🔊 Music On'; musicToggle.classList.add('playing'); }
+      if (musicPlaying) {
+        bgMusic.pause();
+        musicToggle.textContent = '🔈 Music Off';
+        musicToggle.classList.remove('playing');
+      } else {
+        bgMusic.play().catch(()=>{});
+        musicToggle.textContent = '🔊 Music On';
+        musicToggle.classList.add('playing');
+      }
       musicPlaying = !musicPlaying;
     });
 
-    let level=0, lives=3, timerInterval=null;
+    let level = 0, lives = 3, timerInterval = null;
     const timeLimit = 7;
     let currentTarget = null;
 
@@ -214,7 +214,7 @@
     const messageEl     = document.getElementById('message');
     const startBtn      = document.getElementById('startBtn');
 
-    function shuffle(arr) { return arr.sort(() => Math.random()-0.5); }
+    function shuffle(arr) { return arr.sort(() => Math.random() - 0.5); }
 
     function startTimer() {
       clearInterval(timerInterval);
@@ -231,19 +231,19 @@
     }
 
     function startLevel() {
-      if (audioCtx.state==='suspended') audioCtx.resume();
-      if (lives<=0) return endGame();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      if (lives <= 0) return endGame();
+
       level++;
       levelEl.textContent = level;
       livesEl.textContent = lives;
       messageEl.textContent = '';
       startBtn.style.display = 'none';
 
-      // Cap the number of emojis to a reasonable maximum so they always fit
-      const maxEmojis = 16; // adjust as needed for your preferred max
-      const poolSize = Math.min(4 + Math.floor(level*1.5), items.length, maxEmojis);
-      const pool     = shuffle(items).slice(0, poolSize);
-      currentTarget  = pool[Math.floor(Math.random()*pool.length)];
+      // Always use 16 items for a 4×4 grid
+      const GRID_SIZE = 16;
+      const pool = shuffle(items).slice(0, GRID_SIZE);
+      currentTarget = pool[Math.floor(Math.random() * pool.length)];
       instructionEl.textContent = `Найди ${currentTarget.ru}`;
 
       gridEl.innerHTML = '';
@@ -261,27 +261,26 @@
 
     function processAnswer(obj, target, elem) {
       clearInterval(timerInterval);
-      // disable further clicks
       gridEl.querySelectorAll('.item').forEach(i => i.classList.add('disabled'));
 
-      if (obj && obj.ru===target.ru) {
+      if (obj && obj.ru === target.ru) {
         elem.classList.add('correct');
         playCorrectTone();
-        messageEl.textContent='✅ Отлично!';
+        messageEl.textContent = '✅ Отлично!';
         stats.correct++;
         stats.currentStreak++;
         stats.maxStreak = Math.max(stats.maxStreak, stats.currentStreak);
       } else {
         if (elem) elem.classList.add('wrong');
         playWrongTone();
-        // highlight correct
-        const correctDiv = [...gridEl.children].find(d=>d.dataset.ru===target.ru);
+        const correctDiv = [...gridEl.children].find(d => d.dataset.ru === target.ru);
         if (correctDiv) correctDiv.classList.add('correct');
         lives--;
         livesEl.textContent = lives;
         messageEl.textContent = obj ? `❌ Это ${obj.ru}` : '❌ Время вышло!';
         stats.currentStreak = 0;
       }
+
       stats.maxLevel = Math.max(stats.maxLevel, level);
       localStorage.setItem('quizStats', JSON.stringify(stats));
       ACHIEVEMENTS.forEach(a => {
@@ -300,7 +299,8 @@
       messageEl.textContent     = `Достигнут уровень: ${level}`;
       startBtn.textContent      = 'Restart';
       startBtn.style.display    = 'block';
-      level=0; lives=3;
+      level = 0;
+      lives = 3;
     }
 
     startBtn.addEventListener('click', startLevel);
