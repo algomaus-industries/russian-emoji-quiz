@@ -46,13 +46,17 @@
     #grid {
       display: grid;
       gap: clamp(0.5rem, 2vw, 1rem);
-      grid-template-columns: repeat(auto-fit, minmax(3rem, 1fr));
+      grid-template-columns: repeat(auto-fit, minmax(2.2rem, 1fr));
       margin: 1rem 0;
+      align-content: start;
+      height: auto;
+      max-height: 100%;
+      overflow: visible;
     }
 
     .item {
-      font-size: clamp(2rem, 8vw, 2.5rem);
-      padding: clamp(0.5rem, 2vw, 0.8rem);
+      font-size: clamp(1.4rem, 6vw, 2.2rem);
+      padding: clamp(0.3rem, 1vw, 0.6rem);
       background: #e0f7fa;
       border-radius: 0.8rem;
       cursor: pointer;
@@ -62,6 +66,10 @@
       align-items: center;
       justify-content: center;
       aspect-ratio: 1 / 1;
+      min-width: 2.2rem;
+      min-height: 2.2rem;
+      max-width: 100%;
+      max-height: 100%;
     }
     .item.disabled {
       pointer-events: none;
@@ -230,7 +238,16 @@
       messageEl.textContent = '';
       startBtn.style.display = 'none';
 
-      const poolSize = Math.min(4 + Math.floor(level*1.5), items.length);
+      // Calculate max emojis that fit in grid
+      const grid = document.getElementById('grid');
+      const container = document.querySelector('.game-container');
+      // Estimate emoji size and gap (in px)
+      const emojiSize = Math.max(container.offsetWidth, window.innerWidth) / 6.5; // 6.5 per row max
+      const gridHeight = container.offsetHeight - 180; // leave space for UI
+      const maxRows = Math.floor(gridHeight / (emojiSize + 12));
+      const maxCols = Math.floor(container.offsetWidth / (emojiSize + 12));
+      const maxEmojis = Math.max(3, maxRows * maxCols);
+      const poolSize = Math.min(4 + Math.floor(level*1.5), items.length, maxEmojis);
       const pool     = shuffle(items).slice(0, poolSize);
       currentTarget  = pool[Math.floor(Math.random()*pool.length)];
       instructionEl.textContent = `Найди ${currentTarget.ru}`;
