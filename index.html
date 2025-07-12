@@ -170,7 +170,7 @@
       { id: 'level_10',    title: 'Level 10 Master', desc: 'Reach level 10',       icon: '🎖️', condition: s => s.maxLevel >= 10 }
     ];
 
-    // Stats & achievements storage
+    // Stats storage
     let stats = JSON.parse(localStorage.getItem('quizStats')|| '{}');
     stats = { correct:0, currentStreak:0, maxStreak:0, maxLevel:0, ...stats };
     const unlocked = new Set(JSON.parse(localStorage.getItem('achievements')|| '[]'));
@@ -201,6 +201,13 @@
       }
       musicPlaying = !musicPlaying;
     });
+
+    // Build a map from emoji → [all items sharing that icon]
+    const itemsByIcon = items.reduce((acc, obj) => {
+      (acc[obj.icon] = acc[obj.icon]||[]).push(obj);
+      return acc;
+    }, {});
+    const distinctIcons = Object.keys(itemsByIcon);
 
     let level = 0, lives = 3, timerInterval = null;
     const timeLimit = 7;
@@ -240,12 +247,21 @@
       messageEl.textContent = '';
       startBtn.style.display = 'none';
 
-      // Always use 16 items for a 4×4 grid
+      // 1) pick 16 distinct emoji icons
       const GRID_SIZE = 16;
-      const pool = shuffle(items).slice(0, GRID_SIZE);
+      const chosenIcons = shuffle(distinctIcons).slice(0, GRID_SIZE);
+
+      // 2) for each icon, pick one random associated item
+      const pool = chosenIcons.map(icon => {
+        const group = itemsByIcon[icon];
+        return group[Math.floor(Math.random() * group.length)];
+      });
+
+      // choose target
       currentTarget = pool[Math.floor(Math.random() * pool.length)];
       instructionEl.textContent = `Найди ${currentTarget.ru}`;
 
+      // render grid
       gridEl.innerHTML = '';
       pool.forEach(obj => {
         const btn = document.createElement('div');
@@ -299,8 +315,7 @@
       messageEl.textContent     = `Достигнут уровень: ${level}`;
       startBtn.textContent      = 'Restart';
       startBtn.style.display    = 'block';
-      level = 0;
-      lives = 3;
+      level = 0; lives = 3;
     }
 
     startBtn.addEventListener('click', startLevel);
